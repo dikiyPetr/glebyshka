@@ -28,6 +28,88 @@
 <div id="container"></div>
 <canvas id="space"></canvas>
 <script>
+    // ========================================
+    // КОНФИГУРАЦИЯ
+    // ========================================
+    const CONFIG = {
+        // Общие настройки
+        contentHeightMultiplier: 10, // Во сколько раз контент больше высоты экрана
+
+        // Настройки фоновых звезд
+        stars: {
+            count: 800,
+            maxSize: 2,
+            brightnessSpeed: 0.02
+        },
+
+        // Настройки галактик
+        galaxies: {
+            total: 25, // Общее количество галактик
+            aroundMain: 14, // Количество галактик вокруг главной (внизу)
+
+            // Расстояния от центра для галактик вокруг главной
+            distance: {
+                min: 150,
+                maxMultiplier: 0.8 // Умножается на гипотенузу
+            },
+
+            // Скорость внутреннего вращения
+            rotationSpeed: { min: 0.002, max: 0.005 },
+
+            // 3D искажения (scale)
+            mainScale: {
+                x: 1,
+                y: { min: 0.4, max: 1.0 }
+            },
+            otherScale: {
+                x: { min: 0.4, max: 1.0 },
+                y: { min: 0.3, max: 1.0 }
+            },
+
+            // Цвета (RGB каналы)
+            color: { min: 100, max: 255 },
+
+            // Разброс дополнительных галактик по контенту
+            scatteredPosition: { min: 0.3, max: 0.8 }, // От 30% до 80% высоты
+
+            // Свечение галактик
+            glow: {
+                coreSize: 0.1, // Размер ядра относительно размера галактики
+                outerSize: 0.6, // Размер внешнего свечения относительно размера
+                outerIntensity: 0.1 // Интенсивность внешнего свечения
+            },
+
+            // Настройки центральной (главной) галактики
+            mainGalaxy: {
+                size: { min: 1200, max: 2000 }, // Размеры (будут умножены на screenWidthFactor)
+                stars: {
+                    count: { min: 200, max: 800 }, // Больше звезд
+                    arms: { min: 2, max: 6 }, // Больше рукавов
+                    maxSize: { min: 1.0, max: 3 }, // Крупнее звезды
+                    brightness: { min: 1.3, max: 1.6 }, // Ярче
+                    brightnessSpeed: { min: 0.003, max: 0.01 },
+                    clusterOffset: { min: 0.1, max: 0.8 },
+                    densityPower: { min: 1.0, max: 5.0 } // Плотнее к центру
+                }
+            },
+
+            // Настройки обычных галактик
+            regularGalaxy: {
+                size: { min: 250, max: 400 }, // Размеры (будут умножены на screenWidthFactor)
+                stars: {
+                    count: { min: 120, max: 180 },
+                    arms: { min: 2, max: 6 },
+                    maxSize: { min: 2.0, max: 3.0 },
+                    brightness: { min: 1.0, max: 1.4 },
+                    brightnessSpeed: { min: 0.005, max: 0.015 },
+                    clusterOffset: { min: 0.3, max: 0.5 },
+                    densityPower: { min: 2.5, max: 3.5 }
+                }
+            }
+        }
+    };
+    // ========================================
+
     const canvas = document.getElementById('space');
     const ctx = canvas.getContext('2d');
 
@@ -41,44 +123,45 @@
 
     // Фоновые звезды - распределены по всей высоте контента
     const stars = [];
-    const totalContentHeight = window.innerHeight * 10;
+    const totalContentHeight = window.innerHeight * CONFIG.contentHeightMultiplier;
 
-    for (let i = 0; i < 800; i++) {
-        const scrollPosition = Math.random(); // 0-1, где 1 = низ контента
+    for (let i = 0; i < CONFIG.stars.count; i++) {
+        const scrollPosition = Math.random();
         stars.push({
             x: Math.random() * canvas.width,
-            contentY: scrollPosition * totalContentHeight, // Позиция в контенте
-            size: Math.random() * 2,
+            contentY: scrollPosition * totalContentHeight,
+            size: Math.random() * CONFIG.stars.maxSize,
             brightness: Math.random(),
-            speed: Math.random() * 0.02,
-            density: scrollPosition // Плотность зависит от позиции (ниже = плотнее)
+            speed: Math.random() * CONFIG.stars.brightnessSpeed,
+            density: scrollPosition
         });
     }
 
     // Галактики с расположением от центра внизу контента
     const galaxies = [];
-    const numGalaxies = 25; // Увеличено количество галактик
 
     const centerX = canvas.width / 2;
-    const galaxyCenterY = totalContentHeight - canvas.height / 2; // Центр внизу контента
-    const minDistance = 150;
-    const maxDistance = Math.sqrt(Math.pow(canvas.width / 2, 2) + Math.pow(canvas.height / 2, 2)) * 0.8;
+    const galaxyCenterY = totalContentHeight - canvas.height / 2;
+    const minDistance = CONFIG.galaxies.distance.min;
+    const maxDistance = Math.sqrt(Math.pow(canvas.width / 2, 2) + Math.pow(canvas.height / 2, 2)) * CONFIG.galaxies.distance.maxMultiplier;
 
-    // Базовый размер зависит от ширины экрана
-    const screenSizeFactor = (canvas.width / 1920) * 2; // Увеличен коэффициент в 2 раза
+    // Базовые размеры галактик зависят от ширины экрана
+    const screenWidthFactor = canvas.width / 1920;
+    const mainGalaxySize = (CONFIG.galaxies.mainGalaxy.size.min + Math.random() * (CONFIG.galaxies.mainGalaxy.size.max - CONFIG.galaxies.mainGalaxy.size.min)) * screenWidthFactor;
+    const otherGalaxyMinSize = CONFIG.galaxies.regularGalaxy.size.min * screenWidthFactor;
+    const otherGalaxyMaxSize = CONFIG.galaxies.regularGalaxy.size.max * screenWidthFactor;
 
     // Генерируем полностью случайные параметры для каждой галактики
-    for (let i = 0; i < numGalaxies; i++) {
-        const baseSize = i === 0 ? 300 + Math.random() * 100 : 60 + Math.random() * 90;
-        const size = baseSize * screenSizeFactor; // Размер зависит от ширины экрана
+    for (let i = 0; i < CONFIG.galaxies.total; i++) {
+        const size = i === 0 ? mainGalaxySize : otherGalaxyMinSize + Math.random() * (otherGalaxyMaxSize - otherGalaxyMinSize);
         const color = [
-            Math.floor(100 + Math.random() * 155),
-            Math.floor(100 + Math.random() * 155),
-            Math.floor(100 + Math.random() * 155)
+            Math.floor(CONFIG.galaxies.color.min + Math.random() * (CONFIG.galaxies.color.max - CONFIG.galaxies.color.min)),
+            Math.floor(CONFIG.galaxies.color.min + Math.random() * (CONFIG.galaxies.color.max - CONFIG.galaxies.color.min)),
+            Math.floor(CONFIG.galaxies.color.min + Math.random() * (CONFIG.galaxies.color.max - CONFIG.galaxies.color.min))
         ];
-        const speed = 0.002 + Math.random() * 0.003;
-        const scaleX = i === 0 ? 1 : 0.4 + Math.random() * 0.6;
-        const scaleY = i === 0 ? 0.4 + Math.random() * 0.6 : 0.3 + Math.random() * 0.7;
+        const speed = CONFIG.galaxies.rotationSpeed.min + Math.random() * (CONFIG.galaxies.rotationSpeed.max - CONFIG.galaxies.rotationSpeed.min);
+        const scaleX = i === 0 ? CONFIG.galaxies.mainScale.x : CONFIG.galaxies.otherScale.x.min + Math.random() * (CONFIG.galaxies.otherScale.x.max - CONFIG.galaxies.otherScale.x.min);
+        const scaleY = i === 0 ? CONFIG.galaxies.mainScale.y.min + Math.random() * (CONFIG.galaxies.mainScale.y.max - CONFIG.galaxies.mainScale.y.min) : CONFIG.galaxies.otherScale.y.min + Math.random() * (CONFIG.galaxies.otherScale.y.max - CONFIG.galaxies.otherScale.y.min);
         const rotationZ = i === 0 ? 0 : Math.random() * Math.PI * 2;
 
         if (i === 0) {
@@ -88,16 +171,15 @@
                 contentY: galaxyCenterY,
                 size: size,
                 color: color,
-                speed: speed,
+                speed: -speed,
                 scaleX: scaleX,
                 scaleY: scaleY,
                 rotationZ: rotationZ,
                 internalRotation: 0
             });
-        } else if (i <= 14) {
+        } else if (i <= CONFIG.galaxies.aroundMain) {
             // Галактики вокруг главной (внизу)
-            const numOtherGalaxies = 14;
-            const angleStep = (Math.PI * 2) / numOtherGalaxies;
+            const angleStep = (Math.PI * 2) / CONFIG.galaxies.aroundMain;
             const baseAngle = angleStep * (i - 1);
             const angleVariation = (Math.random() - 0.5) * angleStep * 0.5;
             const angle = baseAngle + angleVariation;
@@ -119,7 +201,7 @@
             });
         } else {
             // Дополнительные галактики разбросаны по пути
-            const scrollPosition = 0.3 + Math.random() * 0.5; // Распределены от 30% до 80% высоты контента
+            const scrollPosition = CONFIG.galaxies.scatteredPosition.min + Math.random() * (CONFIG.galaxies.scatteredPosition.max - CONFIG.galaxies.scatteredPosition.min);
             const x = Math.random() * canvas.width;
             const contentY = scrollPosition * totalContentHeight;
 
@@ -138,35 +220,48 @@
     }
 
     // Создаем звезды для каждой галактики
-    galaxies.forEach(galaxy => {
+    galaxies.forEach((galaxy, index) => {
         galaxy.stars = [];
-        const arms = 3;
+
+        // Выбираем конфиг в зависимости от типа галактики
+        const starsConfig = index === 0 ? CONFIG.galaxies.mainGalaxy.stars : CONFIG.galaxies.regularGalaxy.stars;
+
+        // Рандомизируем параметры для каждой галактики
+        const arms = Math.floor(starsConfig.arms.min + Math.random() * (starsConfig.arms.max - starsConfig.arms.min + 1));
+        const starsPerArm = Math.floor(starsConfig.count.min + Math.random() * (starsConfig.count.max - starsConfig.count.min + 1));
+        const maxSize = starsConfig.maxSize.min + Math.random() * (starsConfig.maxSize.max - starsConfig.maxSize.min);
+        const brightness = starsConfig.brightness.min + Math.random() * (starsConfig.brightness.max - starsConfig.brightness.min);
+        const clusterOffset = starsConfig.clusterOffset.min + Math.random() * (starsConfig.clusterOffset.max - starsConfig.clusterOffset.min);
+        const densityPower = starsConfig.densityPower.min + Math.random() * (starsConfig.densityPower.max - starsConfig.densityPower.min);
+
+        // Сохраняем параметры в галактике
+        galaxy.brightness = brightness;
 
         for (let arm = 0; arm < arms; arm++) {
             const armAngle = (Math.PI * 2 / arms) * arm;
 
-            for (let i = 0; i < 150; i++) {
-                const distance = (i / 150) * galaxy.size;
-                const baseAngle = armAngle + (i / 150) * Math.PI * 4;
+            for (let i = 0; i < starsPerArm; i++) {
+                const distance = (i / starsPerArm) * galaxy.size;
+                const baseAngle = armAngle + (i / starsPerArm) * Math.PI * 4;
 
                 const normalizedDistance = distance / galaxy.size;
-                const density = Math.pow(1 - normalizedDistance, 3);
+                const density = Math.pow(1 - normalizedDistance, densityPower);
 
-                const size = Math.random() * 2.5 * density;
+                const size = Math.random() * maxSize * density;
                 const variation = Math.random() * 50 - 25;
 
-                const clusterOffset = (Math.random() - 0.5) * 0.4 * distance;
+                const offset = (Math.random() - 0.5) * clusterOffset * distance;
 
                 galaxy.stars.push({
                     distance: distance,
                     baseAngle: baseAngle,
-                    clusterOffset: clusterOffset,
+                    clusterOffset: offset,
                     size: size,
                     r: Math.max(0, Math.min(255, galaxy.color[0] + variation)),
                     g: Math.max(0, Math.min(255, galaxy.color[1] + variation)),
                     b: Math.max(0, Math.min(255, galaxy.color[2] + variation)),
                     brightness: Math.random(),
-                    brightnessSpeed: (Math.random() * 0.01 + 0.005) * (Math.random() > 0.5 ? 1 : -1),
+                    brightnessSpeed: (Math.random() * (starsConfig.brightnessSpeed.max - starsConfig.brightnessSpeed.min) + starsConfig.brightnessSpeed.min) * (Math.random() > 0.5 ? 1 : -1),
                     baseDensity: density
                 });
             }
@@ -259,7 +354,7 @@
             const starX = Math.cos(currentAngle) * star.distance + offsetX;
             const starY = Math.sin(currentAngle) * star.distance + offsetY;
 
-            const opacity = star.baseDensity * 1.2 * star.brightness;
+            const opacity = star.baseDensity * galaxy.brightness * star.brightness;
 
             ctx.fillStyle = `rgba(${star.r}, ${star.g}, ${star.b}, ${opacity})`;
             ctx.beginPath();
@@ -275,13 +370,13 @@
         });
 
         // Внешнее свечение
-        const outerGlow = ctx.createRadialGradient(0, 0, size * 0.7, 0, 0, size);
-        outerGlow.addColorStop(0, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.3)`);
+        const outerGlow = ctx.createRadialGradient(0, 0, size * 0.7, 0, 0, size * CONFIG.galaxies.glow.outerSize);
+        outerGlow.addColorStop(0, `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${CONFIG.galaxies.glow.outerIntensity})`);
         outerGlow.addColorStop(1, `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0)`);
 
         ctx.fillStyle = outerGlow;
         ctx.beginPath();
-        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        ctx.arc(0, 0, size * CONFIG.galaxies.glow.outerSize, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
