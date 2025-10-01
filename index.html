@@ -133,15 +133,15 @@
             size: Math.random() * CONFIG.stars.maxSize,
             brightness: Math.random(),
             speed: Math.random() * CONFIG.stars.brightnessSpeed,
-            density: scrollPosition
+            density: 1 - scrollPosition // Инвертируем: вверху плотнее, внизу меньше
         });
     }
 
-    // Галактики с расположением от центра внизу контента
+    // Галактики с расположением от центра ВВЕРХУ контента
     const galaxies = [];
 
     const centerX = canvas.width / 2;
-    const galaxyCenterY = totalContentHeight - canvas.height / 2;
+    const galaxyCenterY = canvas.height / 2; // Центр ВВЕРХУ контента
     const minDistance = CONFIG.galaxies.distance.min;
     const maxDistance = Math.sqrt(Math.pow(canvas.width / 2, 2) + Math.pow(canvas.height / 2, 2)) * CONFIG.galaxies.distance.maxMultiplier;
 
@@ -165,20 +165,20 @@
         const rotationZ = i === 0 ? 0 : Math.random() * Math.PI * 2;
 
         if (i === 0) {
-            // Главная галактика внизу
+            // Главная галактика вверху
             galaxies.push({
                 x: centerX,
                 contentY: galaxyCenterY,
                 size: size,
                 color: color,
-                speed: -speed,
+                speed: speed,
                 scaleX: scaleX,
                 scaleY: scaleY,
                 rotationZ: rotationZ,
                 internalRotation: 0
             });
         } else if (i <= CONFIG.galaxies.aroundMain) {
-            // Галактики вокруг главной (внизу)
+            // Галактики вокруг главной (вверху)
             const angleStep = (Math.PI * 2) / CONFIG.galaxies.aroundMain;
             const baseAngle = angleStep * (i - 1);
             const angleVariation = (Math.random() - 0.5) * angleStep * 0.5;
@@ -200,7 +200,7 @@
                 internalRotation: 0
             });
         } else {
-            // Дополнительные галактики разбросаны по пути
+            // Дополнительные галактики разбросаны по пути (от верха вниз)
             const scrollPosition = CONFIG.galaxies.scatteredPosition.min + Math.random() * (CONFIG.galaxies.scatteredPosition.max - CONFIG.galaxies.scatteredPosition.min);
             const x = Math.random() * canvas.width;
             const contentY = scrollPosition * totalContentHeight;
@@ -278,16 +278,16 @@
             // Проверяем, видна ли звезда на экране
             if (screenY < -50 || screenY > canvas.height + 50) return;
 
-            // Плотность и видимость зависят от прогресса скролла
-            const visibilityStart = star.density * 0.7; // Звезды начинают появляться
-            if (scrollProgress < visibilityStart) return;
+            // Плотность и видимость зависят от прогресса скролла (инвертировано)
+            const visibilityEnd = 1 - star.density * 0.7; // Звезды исчезают при скролле вниз
+            if (scrollProgress > visibilityEnd) return;
 
-            const visibilityProgress = Math.min(1, (scrollProgress - visibilityStart) / 0.3);
+            const visibilityProgress = Math.min(1, 1 - (scrollProgress - (visibilityEnd - 0.3)) / 0.3);
 
             star.brightness += star.speed;
             if (star.brightness > 1 || star.brightness < 0) star.speed *= -1;
 
-            const finalOpacity = star.brightness * visibilityProgress;
+            const finalOpacity = star.brightness * Math.max(0, visibilityProgress);
 
             ctx.fillStyle = `rgba(255, 255, 255, ${finalOpacity})`;
             ctx.beginPath();
@@ -295,7 +295,7 @@
             ctx.fill();
 
             if (star.brightness > 0.7) {
-                ctx.fillStyle = `rgba(255, 255, 255, ${(star.brightness - 0.7) * 0.5 * visibilityProgress})`;
+                ctx.fillStyle = `rgba(255, 255, 255, ${(star.brightness - 0.7) * 0.5 * Math.max(0, visibilityProgress)})`;
                 ctx.beginPath();
                 ctx.arc(star.x, screenY, star.size * 2, 0, Math.PI * 2);
                 ctx.fill();
@@ -311,12 +311,12 @@
 
         const { x, size, color, scaleX, scaleY, rotationZ, internalRotation } = galaxy;
 
-        // Плавное появление галактики
+        // Плавное исчезновение галактики при скролле вниз
         const scrollProgress = scrollY / (totalContentHeight - canvas.height);
-        const galaxyAppearStart = (galaxy.contentY / totalContentHeight) - 0.2;
-        if (scrollProgress < galaxyAppearStart) return;
+        const galaxyDisappearEnd = (galaxy.contentY / totalContentHeight) + 0.2;
+        if (scrollProgress > galaxyDisappearEnd) return;
 
-        const appearProgress = Math.min(1, (scrollProgress - galaxyAppearStart) / 0.2);
+        const appearProgress = Math.min(1, 1 - Math.max(0, (scrollProgress - (galaxyDisappearEnd - 0.2)) / 0.2));
 
         ctx.save();
         ctx.globalAlpha = appearProgress;
@@ -408,7 +408,11 @@
         requestAnimationFrame(animate);
     }
 
-    animate();
+    // Автоматический скролл вниз при загрузке страницы
+    window.addEventListener('load', () => {
+        window.scrollTo(0, document.body.scrollHeight);
+        animate();
+    });
 </script>
 </body>
 </html>
