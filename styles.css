@@ -1,0 +1,19 @@
+body {
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    background: #000;
+}
+
+#container {
+    width: 100vw;
+    height: 1000vh; /* 10x высота экрана */
+    position: relative;
+}
+
+canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: block;
+}
