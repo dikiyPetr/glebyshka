@@ -1,3 +1,60 @@
+// ========================================
+// РАБОТА С КУКАМИ
+// ========================================
+
+// Функция для получения куки
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+// Функция для установки куки
+function setCookie(name, value, days = 365) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+}
+
+// Получаем текущий индекс из куков или используем 0
+let currentScrollTextIndex = parseInt(getCookie('scrollTextIndex') || '0', 10);
+
+// Проверяем, что индекс корректен
+if (currentScrollTextIndex >= CONFIG.scrollTexts.length) {
+    currentScrollTextIndex = 0;
+}
+
+// Сохраняем следующий индекс для следующей загрузки
+function saveNextScrollTextIndex() {
+    const nextIndex = (currentScrollTextIndex + 1) % CONFIG.scrollTexts.length;
+    setCookie('scrollTextIndex', nextIndex);
+    console.log(`[Cookie] Saved next index: ${nextIndex}`);
+}
+
+// Устанавливаем изображение из конфига
+function setBottomImage() {
+    const bottomImage = document.getElementById('bottom-image');
+    if (bottomImage && CONFIG.scrollTexts[currentScrollTextIndex]) {
+        bottomImage.src = CONFIG.scrollTexts[currentScrollTextIndex].image;
+        console.log(`[Image] Set to: ${CONFIG.scrollTexts[currentScrollTextIndex].image}`);
+    }
+}
+
+// Устанавливаем изображение при загрузке
+setBottomImage();
+
+// Устанавливаем высоту контейнера из конфига
+const container = document.getElementById('container');
+if (container) {
+    container.style.height = `${CONFIG.contentHeightMultiplier * 100}vh`;
+    console.log(`[Container] Height set to: ${CONFIG.contentHeightMultiplier * 100}vh`);
+}
+
+// ========================================
+// ИНИЦИАЛИЗАЦИЯ CANVAS
+// ========================================
+
 const canvas = document.getElementById('space');
 const ctx = canvas.getContext('2d');
 
@@ -191,13 +248,102 @@ function drawStars(scrollY) {
     });
 }
 
+// Функция для отрисовки текстовых блоков при скролле
+function drawScrollTexts(scrollY) {
+    const scrollProgress = scrollY / (totalContentHeight - canvas.height); // 0-1
+    const offsetTop = canvas.height; // Оффсет сверху равен высоте экрана
+    const offsetBottom = 0; // Убираем оффсет снизу для теста
+
+    // Вычисляем доступную область для отображения текста
+    const availableContentHeight = totalContentHeight - offsetTop - offsetBottom;
+
+    // Распределяем текстовые блоки равномерно по доступной области
+    const textBlock = CONFIG.scrollTexts[currentScrollTextIndex];
+    // Вычисляем базовую позицию текстового блока в контенте
+    const baseContentY = offsetTop + (availableContentHeight / CONFIG.scrollTexts.length) * (0 + 0.5);
+
+    const centerX = canvas.width / 2;
+    const lineHeight = 35;
+    ctx.font = '28px Arial';
+
+    // line3 - сверху с отступом в 1.5 высоты текста от верха контента
+    const line3ContentY = canvas.height + lineHeight;
+    const line3ScreenY = line3ContentY - scrollY;
+
+    if (line3ScreenY >= -200 && line3ScreenY <= canvas.height + 200) {
+        const centerY = canvas.height / 2;
+        const distanceFromCenter = Math.abs(line3ScreenY - centerY);
+        const fadeDistance = canvas.height / 3;
+        const opacity = Math.max(0, Math.min(1, 1 - (distanceFromCenter - fadeDistance) / fadeDistance));
+
+        if (opacity > 0) {
+            ctx.save();
+            ctx.globalAlpha = opacity;
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
+            ctx.shadowBlur = 10;
+            ctx.fillText(textBlock.line3, centerX, line3ScreenY);
+            ctx.restore();
+        }
+    }
+
+    // line2 - в центре
+    const line2ContentY = totalContentHeight / 2;
+    const line2ScreenY = line2ContentY - scrollY;
+
+    if (line2ScreenY >= -200 && line2ScreenY <= canvas.height + 200) {
+        const centerY = canvas.height / 2;
+        const distanceFromCenter = Math.abs(line2ScreenY - centerY);
+        const fadeDistance = canvas.height / 3;
+        const opacity = Math.max(0, Math.min(1, 1 - (distanceFromCenter - fadeDistance) / fadeDistance));
+
+        if (opacity > 0) {
+            ctx.save();
+            ctx.globalAlpha = opacity;
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
+            ctx.shadowBlur = 10;
+            ctx.fillText(textBlock.line2, centerX, line2ScreenY);
+            ctx.restore();
+        }
+    }
+
+    // line1 - в самом низу с отступом от низа равным высоте текста
+    const line1ContentY = totalContentHeight - canvas.height + lineHeight;
+    const line1ScreenY = line1ContentY - scrollY;
+
+    if (line1ScreenY >= -200 && line1ScreenY <= canvas.height + 200) {
+        const centerY = canvas.height / 2;
+        const distanceFromCenter = Math.abs(line1ScreenY - centerY);
+        const fadeDistance = canvas.height / 3;
+        const opacity = Math.max(0, Math.min(1, 1 - (distanceFromCenter - fadeDistance) / fadeDistance));
+
+        if (opacity > 0) {
+            ctx.save();
+            ctx.globalAlpha = opacity;
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
+            ctx.shadowBlur = 10;
+            ctx.fillText(textBlock.line1, centerX, line1ScreenY);
+            ctx.restore();
+        }
+    }
+}
+
+
 function drawGalaxy(galaxy, scrollY) {
     const screenY = galaxy.contentY - scrollY;
 
     // Проверяем, видна ли галактика на экране (с запасом)
     if (screenY < -galaxy.size * 2 || screenY > canvas.height + galaxy.size * 2) return;
 
-    const { x, size, color, scaleX, scaleY, rotationZ, internalRotation } = galaxy;
+    const {x, size, color, scaleX, scaleY, rotationZ, internalRotation} = galaxy;
 
     // Плавное исчезновение галактики при скролле вниз
     const scrollProgress = scrollY / (totalContentHeight - canvas.height);
@@ -305,13 +451,21 @@ for (let i = 0; i < planetsCount; i++) {
         angle: Math.random() * Math.PI * 2
     };
 
-    // Добавляем подпись к особенной планете
+    // Добавляем подпись к особенной планете из scrollTexts
     if (i === CONFIG.solarSystem.specialPlanet.index && i < planetsCount) {
-        planet.label = CONFIG.solarSystem.specialPlanet.label;
+        // Используем текущий индекс из куков
+        planet.label = CONFIG.scrollTexts[currentScrollTextIndex].planetLabel;
+        planet.textIndex = currentScrollTextIndex; // Сохраняем индекс для отображения line4
     }
 
     solarSystemData.planets.push(planet);
 }
+
+// Сохраняем индекс текста для особенной планеты
+solarSystemData.specialPlanetTextIndex = solarSystemData.planets[CONFIG.solarSystem.specialPlanet.index]?.textIndex;
+
+
+// Функция отрисовки изображения внизу страницы с ограничением высоты
 
 // Функция easeInCubic для ускорения
 function easeInCubic(t) {
@@ -389,6 +543,9 @@ class NormalMode extends Mode {
             galaxy.internalRotation += galaxy.speed;
             drawGalaxy(galaxy, scrollY);
         });
+
+        // Рисуем текстовые блоки
+        drawScrollTexts(scrollY);
     }
 }
 
@@ -529,15 +686,24 @@ class SolarSystemMode extends Mode {
     constructor() {
         super('SolarSystem');
         this.fadeInProgress = 0;
+        this.textPulse = 0; // Для анимации пульсации текста
+        this.nextTextX = 0;
+        this.nextTextY = 0;
+        this.nextTextWidth = 0;
     }
 
     onEnter(currentTime) {
         super.onEnter(currentTime);
+        // Сохраняем следующий индекс для следующей загрузки
+        saveNextScrollTextIndex();
     }
 
     onUpdate(currentTime, scrollY, ctx, canvas) {
         const elapsed = currentTime - this.startTime;
         this.fadeInProgress = Math.min(1, elapsed / CONFIG.zoomMode.solarSystemFadeInDuration);
+
+        // Обновляем пульсацию текста
+        this.textPulse = (Math.sin(currentTime * 0.003) + 1) / 2; // 0-1
     }
 
     shouldComplete(currentTime) {
@@ -547,7 +713,7 @@ class SolarSystemMode extends Mode {
 
     render(scrollY, ctx, canvas) {
         const systemScale = CONFIG.zoomMode.solarSystemInitialScale +
-                            (CONFIG.zoomMode.solarSystemFinalScale - CONFIG.zoomMode.solarSystemInitialScale) * this.fadeInProgress;
+            (CONFIG.zoomMode.solarSystemFinalScale - CONFIG.zoomMode.solarSystemInitialScale) * this.fadeInProgress;
 
         ctx.save();
         ctx.globalAlpha = this.fadeInProgress;
@@ -556,6 +722,62 @@ class SolarSystemMode extends Mode {
         ctx.translate(-canvas.width / 2, -canvas.height / 2);
         drawSolarSystem();
         ctx.restore();
+
+        // Отображаем line4 внизу экрана
+        if (solarSystemData.specialPlanetTextIndex !== undefined) {
+            const textBlock = CONFIG.scrollTexts[solarSystemData.specialPlanetTextIndex];
+
+            ctx.save();
+            ctx.globalAlpha = this.fadeInProgress;
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
+            ctx.shadowBlur = 10;
+            ctx.font = '32px Arial';
+
+            // Отображаем текст внизу экрана с отступом
+            const textY = canvas.height - 120;
+            ctx.fillText(textBlock.line4, canvas.width / 2, textY);
+
+            ctx.restore();
+
+            // Проверяем, не последний ли это элемент в scrollTexts
+            const isLastItem = currentScrollTextIndex === CONFIG.scrollTexts.length - 1;
+
+            // Рисуем пульсирующий текст "дальше" только если это не последний элемент
+            if (!isLastItem) {
+                const nextTextY = textY + 50;
+                const nextTextX = canvas.width / 2;
+                const pulseOpacity = 0.6 + this.textPulse * 0.4; // От 0.6 до 1.0
+                const pulseScale = 0.9 + this.textPulse * 0.2; // От 0.9 до 1.1
+
+                // Сохраняем позицию текста для проверки кликов
+                this.nextTextX = nextTextX;
+                this.nextTextY = nextTextY;
+
+                ctx.save();
+                ctx.globalAlpha = this.fadeInProgress * pulseOpacity;
+                ctx.translate(nextTextX, nextTextY);
+                ctx.scale(pulseScale, pulseScale);
+                ctx.translate(-nextTextX, -nextTextY);
+
+                // Рисуем пульсирующий текст "дальше"
+                ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
+                ctx.shadowBlur = 15;
+                ctx.font = '24px Arial';
+
+                ctx.fillText('дальше', nextTextX, nextTextY);
+
+                // Измеряем ширину текста для кликов
+                this.nextTextWidth = ctx.measureText('дальше').width;
+
+                ctx.restore();
+            }
+        }
     }
 }
 
@@ -620,7 +842,7 @@ class ModeManager {
         if (this.modes.solarSystem.active) {
             this.modes.solarSystem.render(scrollY, ctx, canvas);
         }
-        
+
         // Следующий режим (черный экран)
         if (this.currentMode === 'next') {
             ctx.fillStyle = '#000000';
@@ -630,10 +852,10 @@ class ModeManager {
 
     hasActiveMode() {
         return this.modes.normal.active ||
-               this.modes.galaxyZoom.active ||
-               this.modes.solarSystem.active ||
-               this.modes.planetZoom.active ||
-               this.currentMode === 'next';
+            this.modes.galaxyZoom.active ||
+            this.modes.solarSystem.active ||
+            this.modes.planetZoom.active ||
+            this.currentMode === 'next';
     }
 }
 
@@ -664,7 +886,7 @@ function rotate3D(x, y, z, rotX, rotY) {
     let x2 = x * Math.cos(rotY) + z1 * Math.sin(rotY);
     let z2 = -x * Math.sin(rotY) + z1 * Math.cos(rotY);
 
-    return { x: x2, y: y1, z: z2 };
+    return {x: x2, y: y1, z: z2};
 }
 
 function drawSolarSystem() {
@@ -829,6 +1051,61 @@ function animate() {
 
     requestAnimationFrame(animate);
 }
+
+// Обработчик кликов на canvas для перезагрузки страницы
+canvas.addEventListener('click', (event) => {
+    // Проверяем, активен ли режим солнечной системы
+    if (modeManager.modes.solarSystem.active) {
+        const rect = canvas.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+
+        // Проверяем, не последний ли это элемент
+        const isLastItem = currentScrollTextIndex === CONFIG.scrollTexts.length - 1;
+
+        if (!isLastItem) {
+            // Проверяем, попал ли клик в область текста "дальше"
+            const nextText = modeManager.modes.solarSystem;
+            const dx = Math.abs(clickX - nextText.nextTextX);
+            const dy = Math.abs(clickY - nextText.nextTextY);
+
+            // Если клик попал в область текста (прямоугольник вокруг текста)
+            if (dx < nextText.nextTextWidth / 2 + 20 && dy < 20) {
+                console.log('[NextText] Clicked! Reloading page...');
+                location.reload();
+            }
+        }
+    }
+});
+
+// Изменяем курсор при наведении на текст "дальше"
+canvas.addEventListener('mousemove', (event) => {
+    if (modeManager.modes.solarSystem.active) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+
+        // Проверяем, не последний ли это элемент
+        const isLastItem = currentScrollTextIndex === CONFIG.scrollTexts.length - 1;
+
+        if (!isLastItem) {
+            const nextText = modeManager.modes.solarSystem;
+            const dx = Math.abs(mouseX - nextText.nextTextX);
+            const dy = Math.abs(mouseY - nextText.nextTextY);
+
+            // Меняем курсор, если мышь над текстом
+            if (dx < nextText.nextTextWidth / 2 + 20 && dy < 20) {
+                canvas.style.cursor = 'pointer';
+            } else {
+                canvas.style.cursor = 'default';
+            }
+        } else {
+            canvas.style.cursor = 'default';
+        }
+    } else {
+        canvas.style.cursor = 'default';
+    }
+});
 
 // Автоматический скролл вниз при загрузке страницы
 window.addEventListener('load', () => {
