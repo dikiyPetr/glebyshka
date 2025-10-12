@@ -753,7 +753,7 @@ class SolarSystemMode extends Mode {
             const textBlock = CONFIG.scrollTexts[solarSystemData.specialPlanetTextIndex];
 
             // Отображаем текст внизу экрана с отступом и переносом
-            const textY = canvas.height - 120;
+            const textY = canvas.height - 150;
             const line4FontSize = 32;
             const line4LineHeight = 40;
             const line4MaxWidth = canvas.width * 0.8; // 80% ширины экрана
