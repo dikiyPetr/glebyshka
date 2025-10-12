@@ -213,6 +213,54 @@ galaxies.forEach((galaxy, index) => {
     }
 });
 
+// Функция для разбиения текста на строки с учетом максимальной ширины
+function wrapText(text, maxWidth, fontSize = 28) {
+    ctx.font = `${fontSize}px Arial`;
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    for (let i = 0; i < words.length; i++) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+        const metrics = ctx.measureText(testLine);
+
+        if (metrics.width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = words[i];
+        } else {
+            currentLine = testLine;
+        }
+    }
+
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+
+    return lines;
+}
+
+// Функция для отрисовки многострочного текста с переносом
+function drawMultilineText(text, centerX, startY, lineHeight, maxWidth, fontSize, opacity, shadowBlur = 10) {
+    const lines = wrapText(text, maxWidth, fontSize);
+    const totalHeight = lines.length * lineHeight;
+    const startYCentered = startY - (totalHeight - lineHeight) / 2;
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
+    ctx.shadowBlur = shadowBlur;
+    ctx.font = `${fontSize}px Arial`;
+
+    lines.forEach((line, index) => {
+        ctx.fillText(line, centerX, startYCentered + index * lineHeight);
+    });
+
+    ctx.restore();
+}
+
 function drawStars(scrollY) {
     const scrollProgress = scrollY / (totalContentHeight - canvas.height); // 0-1
 
@@ -264,7 +312,8 @@ function drawScrollTexts(scrollY) {
 
     const centerX = canvas.width / 2;
     const lineHeight = 35;
-    ctx.font = '28px Arial';
+    const fontSize = 28;
+    const maxWidth = canvas.width * 0.8; // 80% ширины экрана
 
     // line3 - сверху с отступом в 1.5 высоты текста от верха контента
     const line3ContentY = canvas.height + lineHeight;
@@ -277,15 +326,7 @@ function drawScrollTexts(scrollY) {
         const opacity = Math.max(0, Math.min(1, 1 - (distanceFromCenter - fadeDistance) / fadeDistance));
 
         if (opacity > 0) {
-            ctx.save();
-            ctx.globalAlpha = opacity;
-            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
-            ctx.shadowBlur = 10;
-            ctx.fillText(textBlock.line3, centerX, line3ScreenY);
-            ctx.restore();
+            drawMultilineText(textBlock.line3, centerX, line3ScreenY, lineHeight, maxWidth, fontSize, opacity);
         }
     }
 
@@ -300,15 +341,7 @@ function drawScrollTexts(scrollY) {
         const opacity = Math.max(0, Math.min(1, 1 - (distanceFromCenter - fadeDistance) / fadeDistance));
 
         if (opacity > 0) {
-            ctx.save();
-            ctx.globalAlpha = opacity;
-            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
-            ctx.shadowBlur = 10;
-            ctx.fillText(textBlock.line2, centerX, line2ScreenY);
-            ctx.restore();
+            drawMultilineText(textBlock.line2, centerX, line2ScreenY, lineHeight, maxWidth, fontSize, opacity);
         }
     }
 
@@ -323,15 +356,7 @@ function drawScrollTexts(scrollY) {
         const opacity = Math.max(0, Math.min(1, 1 - (distanceFromCenter - fadeDistance) / fadeDistance));
 
         if (opacity > 0) {
-            ctx.save();
-            ctx.globalAlpha = opacity;
-            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
-            ctx.shadowBlur = 10;
-            ctx.fillText(textBlock.line1, centerX, line1ScreenY);
-            ctx.restore();
+            drawMultilineText(textBlock.line1, centerX, line1ScreenY, lineHeight, maxWidth, fontSize, opacity);
         }
     }
 }
@@ -727,27 +752,29 @@ class SolarSystemMode extends Mode {
         if (solarSystemData.specialPlanetTextIndex !== undefined) {
             const textBlock = CONFIG.scrollTexts[solarSystemData.specialPlanetTextIndex];
 
-            ctx.save();
-            ctx.globalAlpha = this.fadeInProgress;
-            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(100, 150, 255, 0.8)';
-            ctx.shadowBlur = 10;
-            ctx.font = '32px Arial';
-
-            // Отображаем текст внизу экрана с отступом
+            // Отображаем текст внизу экрана с отступом и переносом
             const textY = canvas.height - 120;
-            ctx.fillText(textBlock.line4, canvas.width / 2, textY);
+            const line4FontSize = 32;
+            const line4LineHeight = 40;
+            const line4MaxWidth = canvas.width * 0.8; // 80% ширины экрана
 
-            ctx.restore();
+            drawMultilineText(
+                textBlock.line4,
+                canvas.width / 2,
+                textY,
+                line4LineHeight,
+                line4MaxWidth,
+                line4FontSize,
+                this.fadeInProgress,
+                10
+            );
 
             // Проверяем, не последний ли это элемент в scrollTexts
             const isLastItem = currentScrollTextIndex === CONFIG.scrollTexts.length - 1;
 
             // Рисуем пульсирующий текст "дальше" только если это не последний элемент
             if (!isLastItem) {
-                const nextTextY = textY + 50;
+                const nextTextY = 40; // Отступ от верха экрана
                 const nextTextX = canvas.width / 2;
                 const pulseOpacity = 0.6 + this.textPulse * 0.4; // От 0.6 до 1.0
                 const pulseScale = 0.9 + this.textPulse * 0.2; // От 0.9 до 1.1
